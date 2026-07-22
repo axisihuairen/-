@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>浮空纪元 - Floating Era</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0b1026;
+  color: #e0e8ff;
+  font-family: 'Microsoft YaHei', sans-serif;
+  overflow: hidden;
+  display: flex;
+  height: 100vh;
+}
+#gameCanvas {
+  background: linear-gradient(to bottom, #0b1a3a, #1a3a6e);
+  display: block;
+  cursor: crosshair;
+}
+#sidebar {
+  width: 300px;
+  background: rgba(10, 20, 40, 0.95);
+  border-left: 2px solid #4a90d9;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+h1 { font-size: 20px; color: #6ec8ff; text-align: center; margin-bottom: 5px; text-shadow: 0 0 10px #4a90d9; }
+h2 { font-size: 14px; color: #a0c8ff; border-bottom: 1px solid #4a90d9; padding-bottom: 4px; margin-top: 8px; }
+.stat-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+.stat-label { color: #8aa8d0; }
+.stat-value { color: #fff; font-weight: bold; }
+#weatherBox {
+  background: rgba(74, 144, 217, 0.15);
+  border: 1px solid #4a90d9;
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+  font-size: 13px;
+}
+button {
+  background: linear-gradient(to bottom, #4a90d9, #2a5a9e);
+  border: none;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 4px;
+  width: 100%;
+  transition: all 0.2s;
+}
+button:hover { background: linear-gradient(to bottom, #6ab0ff, #4a90d9); transform: scale(1.02); }
+button:disabled { background: #3a4a5e; cursor: not-allowed; transform: none; }
+#logBox {
+  flex: 1;
+  background: rgba(0, 10, 30, 0.6);
+  border: 1px solid #2a4a7e;
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 11px;
+  overflow-y: auto;
+  min-height: 120px;
+}
+.log-entry { margin-bottom: 3px; color: #a0b8d0; }
+.log-entry.warn { color: #ffcc66; }
+.log-entry.success { color: #66ff99; }
+#controls {
+  font-size: 11px;
+  color: #6a8ab0;
+  text-align: center;
+  margin-top: 5px;
+}
+.build-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid #1a2a4e;
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="sidebar">
+  <h1>浮空纪元</h1>
+  <div id="weatherBox">天气: 晴朗 | 风速: 微风</div>
+  <div>
+    <h2>飞艇状态</h2>
+    <div class="stat-row"><span class="stat-label">坐标</span><span class="stat-value" id="pos">0, 0</span></div>
+    <div class="stat-row"><span class="stat-label">速度</span><span class="stat-value" id="spd">0</span></div>
+    <div class="stat-row"><span class="stat-label">货仓</span><span class="stat-value" id="cargo">0/50</span></div>
+    <div class="stat-row"><span class="stat-label">船体</span><span class="stat-value" id="hp">100/100</span></div>
+    <div class="stat-row"><span class="stat-label">战斗力</span><span class="stat-value" id="atk">10</span></div>
+  </div>
+  <div>
+    <h2>资源</h2>
+    <div class="stat-row"><span class="stat-label">木材</span><span class="stat-value" id="wood">0</span></div>
+    <div class="stat-row"><span class="stat-label">矿石</span><span class="stat-value" id="ore">0</span></div>
+    <div class="stat-row"><span class="stat-label">科技碎片</span><span class="stat-value" id="tech">0</span></div>
+    <div class="stat-row"><span class="stat-label">能源</span><span class="stat-value" id="energy">100</span></div>
+  </div>
+  <div>
+    <h2>建造与升级</h2>
+    <div class="build-item">
+      <span>扩建货仓(+20)</span>
+      <button onclick="game.upgrade('cargo')">木材20</button>
+    </div>
+    <div class="build-item">
+      <span>强化装甲</span>
+      <button onclick="game.upgrade('armor')">矿石15</button>
+    </div>
+    <div class="build-item">
+      <span>火力升级</span>
+      <button onclick="game.upgrade('weapon')">矿石20 科技5</button>
+    </div>
+    <div class="build-item">
+      <span>引擎改造</span>
+      <button onclick="game.upgrade('engine')">木材15 科技5</button>
+    </div>
+    <div class="build-item">
+      <span>建设前哨站</span>
+      <button onclick="game.upgrade('outpost')">木材50 矿石30</button>
+    </div>
+  </div>
+  <div>
+    <h2>日志</h2>
+    <div id="logBox"></div>
+  </div>
+  <div id="controls">WASD/方向键移动 | E采集 | 空格攻击 | B建造</div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() {
+  W = window.innerWidth - 300;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+class FloatingEra {
+  constructor() {
+    this.camera = { x: 0, y: 0 };
+    this.player = {
+      x: 0, y: 0,
+      vx: 0, vy: 0,
+      angle: 0,
+      hp: 100, maxHp: 100,
+      cargo: 0, maxCargo: 50,
+      atk: 10,
+      speed: 3,
+      wood: 0, ore: 0, tech: 0, energy: 100
+    };
+    this.keys = {};
+    this.islands = [];
+    this.enemies = [];
+    this.bullets = [];
+    this.particles = [];
+    this.clouds = [];
+    this.outposts = [];
+    this.weather = 'clear';
+    this.weatherTimer = 0;
+    this.msgTimer = 0;
+    this.nearbyIsland = null;
+    this.outpostCount = 0;
+
+    this.generateWorld();
+    this.setupInput();
+    this.log('欢迎来到浮空纪元！驾驶飞艇探索云海中的岛屿吧。', 'success');
+  }
+
+  generateWorld() {
+    for (let i = 0; i < 60; i++) {
+      const types = ['forest', 'mine', 'ruin', 'abandoned'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const island = {
+        x: rand(-3000, 3000),
+        y: rand(-3000, 3000),
+        r: rand(40, 90),
+        type: type,
+        resources: Math.floor(rand(20, 80)),
+        name: this.generateIslandName(type),
+        harvested: false
+      };
+      let overlap = false;
+      for (let other of this.islands) {
+        if (dist(island, other) < island.r + other.r + 50) overlap = true;
+      }
+      if (!overlap) this.islands.push(island);
+    }
+    for (let i = 0; i < 40; i++) {
+      this.clouds.push({ x: rand(-4000, 4000), y: rand(-4000, 4000), r: rand(60, 200), speed: rand(0.1, 0.4), opacity: rand(0.15, 0.35) });
+    }
+    for (let i = 0; i < 15; i++) {
+      this.enemies.push({
+        x: rand(-2500, 2500), y: rand(-2500, 2500),
+        hp: 30, maxHp: 30, atk: 5,
+        angle: rand(0, Math.PI * 2),
+        speed: rand(0.8, 1.5),
+        patrolCenter: { x: 0, y: 0 },
+        state: 'patrol'
+      });
+      this.enemies[this.enemies.length - 1].patrolCenter = { x: this.enemies[this.enemies.length - 1].x, y: this.enemies[this.enemies.length - 1].y };
+    }
+  }
+
+  generateIslandName(type) {
+    const prefixes = ['碎云', '浮光', '遗迹', '风暴', '寂静', '琥珀', '星尘', '遗忘', '晨曦', '暮光'];
+    const suffixes = { forest: '林岛', mine: '矿屿', ruin: '废都', abandoned: '荒岛' };
+    return prefixes[Math.floor(Math.random() * prefixes.length)] + suffixes[type];
+  }
+
+  setupInput() {
+    window.addEventListener('keydown', e => this.keys[e.key.toLowerCase()] = true);
+    window.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
+  }
+
+  log(msg, type = '') {
+    const box = document.getElementById('logBox');
+    const div = document.createElement('div');
+    div.className = 'log-entry ' + type;
+    div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    if (box.children.length > 50) box.removeChild(box.firstChild);
+  }
+
+  upgrade(type) {
+    const p = this.player;
+    if (type === 'cargo') {
+      if (p.wood >= 20) { p.wood -= 20; p.maxCargo += 20; this.log('货仓扩建完成！容量 +20', 'success'); }
+      else this.log('木材不足！', 'warn');
+    } else if (type === 'armor') {
+      if (p.ore >= 15) { p.ore -= 15; p.maxHp += 30; p.hp += 30; this.log('装甲强化完成！船体 +30', 'success'); }
+      else this.log('矿石不足！', 'warn');
+    } else if (type === 'weapon') {
+      if (p.ore >= 20 && p.tech >= 5) { p.ore -= 20; p.tech -= 5; p.atk += 8; this.log('火力升级完成！攻击 +8', 'success'); }
+      else this.log('资源不足！', 'warn');
+    } else if (type === 'engine') {
+      if (p.wood >= 15 && p.tech >= 5) { p.wood -= 15; p.tech -= 5; p.speed += 0.8; this.log('引擎改造完成！速度提升', 'success'); }
+      else this.log('资源不足！', 'warn');
+    } else if (type === 'outpost') {
+      if (p.wood >= 50 && p.ore >= 30) {
+        if (this.nearbyIsland) {
+          p.wood -= 50; p.ore -= 30;
+          this.outposts.push({ x: this.nearbyIsland.x, y: this.nearbyIsland.y, r: 15 });
+          this.outpostCount++;
+          this.log(`在 ${this.nearbyIsland.name} 建立了前哨站！`, 'success');
+        } else {
+          this.log('必须靠近岛屿才能建立前哨站！', 'warn');
+        }
+      } else this.log('资源不足！', 'warn');
+    }
+  }
+
+  update() {
+    const p = this.player;
+
+    // Weather
+    this.weatherTimer++;
+    if (this.weatherTimer > 1200) {
+      this.weatherTimer = 0;
+      const weathers = ['clear', 'windy', 'storm', 'fog'];
+      this.weather = weathers[Math.floor(Math.random() * weathers.length)];
+      const weatherNames = { clear: '晴朗', windy: '强风', storm: '雷暴', fog: '浓雾' };
+      this.log(`天气变化：${weatherNames[this.weather]}`, 'warn');
+      document.getElementById('weatherBox').textContent = `天气: ${weatherNames[this.weather]} | 影响: ${this.getWeatherEffect()}`;
+    }
+
+    let moveSpeed = p.speed;
+    if (this.weather === 'windy') moveSpeed *= 1.3;
+    if (this.weather === 'storm') moveSpeed *= 0.6;
+    if (this.weather === 'fog') moveSpeed *= 0.8;
+
+    // Movement
+    let ax = 0, ay = 0;
+    if (this.keys['w'] || this.keys['arrowup']) ay -= 1;
+    if (this.keys['s'] || this.keys['arrowdown']) ay += 1;
+    if (this.keys['a'] || this.keys['arrowleft']) ax -= 1;
+    if (this.keys['d'] || this.keys['arrowright']) ax += 1;
+    if (ax !== 0 || ay !== 0) {
+      const len = Math.hypot(ax, ay);
+      ax /= len; ay /= len;
+      p.vx += ax * 0.3;
+      p.vy += ay * 0.3;
+      p.angle = Math.atan2(ay, ax);
+    }
+    p.vx *= 0.92;
+    p.vy *= 0.92;
+    p.x += p.vx * moveSpeed;
+    p.y += p.vy * moveSpeed;
+
+    // Energy
+    if (this.keys[' '] && p.energy > 0) {
+      this.fireBullet();
+      p.energy -= 2;
+      if (p.energy < 0) p.energy = 0;
+    }
+    if (p.energy < 100) p.energy += 0.1;
+
+    // Islands
+    this.nearbyIsland = null;
+    for (let island of this.islands) {
+      const d = dist(p, island);
+      if (d < island.r + 60) {
+        this.nearbyIsland = island;
+        if (this.keys['e'] && island.resources > 0 && p.cargo < p.maxCargo) {
+          const amt = Math.min(3, island.resources, p.maxCargo - p.cargo);
+          island.resources -= amt;
+          p.cargo += amt;
+          if (island.type === 'forest') p.wood += amt;
+          else if (island.type === 'mine') p.ore += amt;
+          else if (island.type === 'ruin') p.tech += Math.ceil(amt / 2);
+          else { p.wood += Math.ceil(amt / 2); p.ore += Math.floor(amt / 2); }
+          this.particles.push({ x: island.x + rand(-island.r, island.r), y: island.y + rand(-island.r, island.r), vx: rand(-1, 1), vy: rand(-2, -0.5), life: 30, color: '#ffcc66' });
+          if (Math.random() < 0.1) this.log(`从 ${island.name} 采集了资源`);
+          if (island.resources <= 0 && !island.harvested) {
+            island.harvested = true;
+            this.log(`${island.name} 的资源已枯竭...`, 'warn');
+          }
+        }
+      }
+    }
+
+    // Enemies
+    for (let e of this.enemies) {
+      const d = dist(p, e);
+      if (d < 300) {
+        e.state = 'chase';
+        e.angle = Math.atan2(p.y - e.y, p.x - e.x);
+      } else {
+        e.state = 'patrol';
+        if (Math.random() < 0.02) e.angle += rand(-1, 1);
+      }
+      const sp = e.state === 'chase' ? e.speed * 1.2 : e.speed;
+      e.x += Math.cos(e.angle) * sp;
+      e.y += Math.sin(e.angle) * sp;
+      if (d < 40) {
+        p.hp -= e.atk * 0.05;
+        if (Math.random() < 0.05) this.log('受到攻击！船体受损', 'warn');
+      }
+      if (e.hp <= 0) {
+        this.particles.push({ x: e.x, y: e.y, vx: rand(-3, 3), vy: rand(-3, 3), life: 40, color: '#ff4444', size: 4 });
+      }
+    }
+    this.enemies = this.enemies.filter(e => e.hp > 0);
+
+    // Bullets
+    for (let b of this.bullets) {
+      b.x += Math.cos(b.angle) * 8;
+      b.y += Math.sin(b.angle) * 8;
+      b.life--;
+      for (let e of this.enemies) {
+        if (dist(b, e) < 25) {
+          e.hp -= p.atk;
+          b.life = 0;
+          this.particles.push({ x: e.x, y: e.y, vx: rand(-2, 2), vy: rand(-2, 2), life: 15, color: '#ffaa44' });
+          break;
+        }
+      }
+    }
+    this.bullets = this.bullets.filter(b => b.life > 0);
+
+    // Particles
+    for (let pt of this.particles) {
+      pt.x += pt.vx;
+      pt.y += pt.vy;
+      pt.life--;
+    }
+    this.particles = this.particles.filter(pt => pt.life > 0);
+
+    // Clouds
+    for (let c of this.clouds) {
+      c.x += c.speed;
+      if (c.x > 5000) c.x = -5000;
+    }
+
+    // Camera
+    this.camera.x = p.x - W / 2;
+    this.camera.y = p.y - H / 2;
+
+    if (p.hp <= 0) {
+      p.hp = p.maxHp;
+      p.x = 0; p.y = 0;
+      p.vx = 0; p.vy = 0;
+      this.log('飞艇损毁！在起始点重生。', 'warn');
+    }
+
+    // UI
+    document.getElementById('pos').textContent = `${Math.floor(p.x)}, ${Math.floor(p.y)}`;
+    document.getElementById('spd').textContent = Math.floor(Math.hypot(p.vx, p.vy) * 100);
+    document.getElementById('cargo').textContent = `${p.cargo}/${p.maxCargo}`;
+    document.getElementById('hp').textContent = `${Math.floor(p.hp)}/${p.maxHp}`;
+    document.getElementById('atk').textContent = p.atk;
+    document.getElementById('wood').textContent = p.wood;
+    document.getElementById('ore').textContent = p.ore;
+    document.getElementById('tech').textContent = p.tech;
+    document.getElementById('energy').textContent = Math.floor(p.energy);
+  }
+
+  getWeatherEffect() {
+    const effects = { clear: '无影响', windy: '速度+30%', storm: '速度-40%', fog: '视野受限' };
+    return effects[this.weather];
+  }
+
+  fireBullet() {
+    if (this.player.energy < 5) return;
+    this.bullets.push({
+      x: this.player.x + Math.cos(this.player.angle) * 25,
+      y: this.player.y + Math.sin(this.player.angle) * 25,
+      angle: this.player.angle + rand(-0.1, 0.1),
+      life: 60
+    });
+  }
+
+  draw() {
+    ctx.clearRect(0, 0, W, H);
+    const cx = this.camera.x;
+    const cy = this.camera.y;
+
+    // Background grid
+    ctx.strokeStyle = 'rgba(100, 160, 255, 0.06)';
+    ctx.lineWidth = 1;
+    const gridSize = 200;
+    const offX = -cx % gridSize;
+    const offY = -cy % gridSize;
+    for (let x = offX; x < W; x += gridSize) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = offY; y < H; y += gridSize) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    // Clouds
+    for (let c of this.clouds) {
+      const sx = c.x - cx;
+      const sy = c.y - cy;
+      if (sx < -c.r || sx > W + c.r || sy < -c.r || sy > H + c.r) continue;
+      ctx.fillStyle = `rgba(200, 220, 255, ${c.opacity})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, c.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Islands
+    for (let island of this.islands) {
+      const sx = island.x - cx;
+      const sy = island.y - cy;
+      if (sx < -island.r || sx > W + island.r || sy < -island.r || sy > H + island.r) continue;
+
+      const colors = { forest: '#2d8a4e', mine: '#6e6e7a', ruin: '#8a6e2d', abandoned: '#5a7a8a' };
+      const glowColors = { forest: '#44cc77', mine: '#aaaabb', ruin: '#ccaa44', abandoned: '#77aacc' };
+
+      // Island shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(sx + 8, sy + 12, island.r, island.r * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Island body
+      const grad = ctx.createRadialGradient(sx - island.r * 0.3, sy - island.r * 0.3, 5, sx, sy, island.r);
+      grad.addColorStop(0, glowColors[island.type]);
+      grad.addColorStop(1, colors[island.type]);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(sx, sy, island.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Detail
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.arc(sx - island.r * 0.2, sy - island.r * 0.2, island.r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Name
+      ctx.fillStyle = '#cce8ff';
+      ctx.font = '11px Microsoft YaHei';
+      ctx.textAlign = 'center';
+      ctx.fillText(island.name, sx, sy + island.r + 16);
+
+      // Resource bar
+      if (island.resources > 0) {
+        const barW = island.r * 1.2;
+        const pct = island.resources / 80;
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(sx - barW / 2, sy + island.r + 22, barW, 4);
+        ctx.fillStyle = pct > 0.5 ? '#66ff99' : '#ffcc66';
+        ctx.fillRect(sx - barW / 2, sy + island.r + 22, barW * pct, 4);
+      }
+
+      // Nearby highlight
+      if (island === this.nearbyIsland) {
+        ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, island.r + 8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px Microsoft YaHei';
+        ctx.fillText('按 E 采集', sx, sy - island.r - 12);
+      }
+    }
+
+    // Outposts
+    for (let o of this.outposts) {
+      const sx = o.x - cx;
+      const sy = o.y - cy;
+      ctx.fillStyle = '#4a90d9';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 15);
+      ctx.lineTo(sx + 12, sy + 10);
+      ctx.lineTo(sx - 12, sy + 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#88ccff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Enemies
+    for (let e of this.enemies) {
+      const sx = e.x - cx;
+      const sy = e.y - cy;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(e.angle);
+      ctx.fillStyle = e.state === 'chase' ? '#ff4444' : '#cc6666';
+      ctx.beginPath();
+      ctx.moveTo(12, 0);
+      ctx.lineTo(-8, 7);
+      ctx.lineTo(-8, -7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      // HP bar
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(sx - 12, sy - 16, 24, 3);
+      ctx.fillStyle = '#ff6666';
+      ctx.fillRect(sx - 12, sy - 16, 24 * (e.hp / e.maxHp), 3);
+    }
+
+    // Bullets
+    ctx.fillStyle = '#88ddff';
+    for (let b of this.bullets) {
+      const sx = b.x - cx;
+      const sy = b.y - cy;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(136, 221, 255, 0.3)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#88ddff';
+    }
+
+    // Player
+    const px = W / 2;
+    const py = H / 2;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(this.player.angle);
+
+    // Airship body
+    ctx.fillStyle = '#4a90d9';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 28, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#88ccff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Balloon
+    ctx.fillStyle = '#6ec8ff';
+    ctx.beginPath();
+    ctx.ellipse(0, -10, 18, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Propeller
+    ctx.fillStyle = '#a0d8ff';
+    ctx.fillRect(-28, -3, 6, 6);
+
+    // Cockpit
+    ctx.fillStyle = '#cce8ff';
+    ctx.beginPath();
+    ctx.arc(8, 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Engine flame
+    if (Math.hypot(this.player.vx, this.player.vy) > 0.5) {
+      ctx.fillStyle = 'rgba(100, 200, 255, 0.6)';
+      ctx.beginPath();
+      ctx.arc(px - Math.cos(this.player.angle) * 32, py - Math.sin(this.player.angle) * 32, rand(3, 7), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Particles
+    for (let pt of this.particles) {
+      const sx = pt.x - cx;
+      const sy = pt.y - cy;
+      ctx.fillStyle = pt.color || '#ffcc66';
+      ctx.globalAlpha = pt.life / 30;
+      ctx.beginPath();
+      ctx.arc(sx, sy, pt.size || 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // Weather overlay
+    if (this.weather === 'storm') {
+      ctx.fillStyle = `rgba(10, 20, 50, ${0.2 + Math.random() * 0.1})`;
+      ctx.fillRect(0, 0, W, H);
+      if (Math.random() < 0.05) {
+        ctx.fillStyle = 'rgba(200, 220, 255, 0.15)';
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+    if (this.weather === 'fog') {
+      ctx.fillStyle = 'rgba(200, 220, 240, 0.2)';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Minimap
+    const mmSize = 120;
+    const mmX = W - mmSize - 15;
+    const mmY = H - mmSize - 15;
+    ctx.fillStyle = 'rgba(10, 20, 40, 0.8)';
+    ctx.fillRect(mmX, mmY, mmSize, mmSize);
+    ctx.strokeStyle = '#4a90d9';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(mmX, mmY, mmSize, mmSize);
+    const mmScale = mmSize / 6000;
+    for (let island of this.islands) {
+      const ix = mmX + (island.x + 3000) * mmScale;
+      const iy = mmY + (island.y + 3000) * mmScale;
+      ctx.fillStyle = island.resources > 0 ? '#4a90d9' : '#3a4a5e';
+      ctx.beginPath();
+      ctx.arc(ix, iy, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#ff4444';
+    for (let e of this.enemies) {
+      const ix = mmX + (e.x + 3000) * mmScale;
+      const iy = mmY + (e.y + 3000) * mmScale;
+      ctx.fillRect(ix - 1, iy - 1, 3, 3);
+    }
+    ctx.fillStyle = '#66ff99';
+    const pxmm = mmX + (this.player.x + 3000) * mmScale;
+    const pymm = mmY + (this.player.y + 3000) * mmScale;
+    ctx.fillRect(pxmm - 2, pymm - 2, 5, 5);
+  }
+
+  loop() {
+    this.update();
+    this.draw();
+    requestAnimationFrame(() => this.loop());
+  }
+}
+
+const game = new FloatingEra();
+game.loop();
+</script>
+</body>
+</html>
