@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Welcome to A Xisihuairen's website</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-1: #0f0c29;
+    --bg-2: #302b63;
+    --bg-3: #24243e;
+    --accent: #ff7eb3;
+    --accent-2: #42e2f5;
+    --text: #f5f5f7;
+    --muted: rgba(245, 245, 247, 0.7);
+    --card: rgba(255, 255, 255, 0.08);
+    --border: rgba(255, 255, 255, 0.18);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+    color: var(--text);
+    background: linear-gradient(135deg, var(--bg-1), var(--bg-2), var(--bg-3));
+    background-attachment: fixed;
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* 顶部导航 */
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 18px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(15, 12, 41, 0.4);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+  }
+
+  .logo {
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .lang-switch {
+    position: relative;
+  }
+
+  .lang-switch button {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .lang-switch button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent-2);
+  }
+
+  .lang-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 160px;
+    background: rgba(15, 12, 41, 0.95);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: all 0.25s ease;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .lang-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .lang-dropdown button {
+    width: 100%;
+    justify-content: flex-start;
+    border: none;
+    padding: 10px 14px;
+    background: transparent;
+    border-radius: 8px;
+    text-align: left;
+  }
+
+  .lang-dropdown button:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .lang-dropdown button.active {
+    background: linear-gradient(90deg, rgba(255, 126, 179, 0.25), rgba(66, 226, 245, 0.25));
+    color: var(--accent-2);
+  }
+
+  /* Hero 主区 */
+  main {
+    padding: 140px 40px 80px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 80px 20px 100px;
+    position: relative;
+  }
+
+  .hero::before,
+  .hero::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.55;
+    z-index: 0;
+  }
+  .hero::before {
+    width: 380px; height: 380px;
+    background: var(--accent);
+    top: -40px; left: -80px;
+  }
+  .hero::after {
+    width: 420px; height: 420px;
+    background: var(--accent-2);
+    bottom: -100px; right: -80px;
+  }
+
+  .hero > * { position: relative; z-index: 1; }
+
+  .tag {
+    display: inline-block;
+    padding: 6px 16px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--card);
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 24px;
+    background: linear-gradient(90deg, #fff, var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: fadeUp 0.9s ease both;
+  }
+
+  .hero p.lead {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 720px;
+    margin: 0 auto 40px;
+    animation: fadeUp 1s ease both 0.15s;
+  }
+
+  .cta {
+    display: inline-flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 1.1s ease both 0.3s;
+  }
+
+  .btn {
+    padding: 12px 28px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: #0f0c29;
+    box-shadow: 0 10px 24px rgba(255, 126, 179, 0.35);
+  }
+
+  .btn-secondary {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(66, 226, 245, 0.35);
+  }
+
+  /* 卡片区 */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+    margin-top: 80px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 28px;
+    transition: transform 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-6px);
+    border-color: var(--accent-2);
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .card .icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #0f0c29;
+    font-size: 1.4rem;
+    margin-bottom: 18px;
+  }
+
+  .card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+  }
+
+  .card p {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  /* 页脚 */
+  footer {
+    margin-top: 120px;
+    padding: 60px 40px 30px;
+    border-top: 1px solid var(--border);
+    background: rgba(15, 12, 41, 0.5);
+    text-align: center;
+  }
+
+  footer .email-label {
+    color: var(--muted);
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+  }
+
+  footer .email {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--accent-2);
+    text-decoration: none;
+    transition: color 0.25s;
+  }
+
+  footer .email:hover { color: var(--accent); }
+
+  footer .copyright {
+    margin-top: 24px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 14px 20px; }
+    main { padding: 120px 20px 60px; }
+    .hero { padding: 50px 10px 70px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">✦ Xisihuairen</div>
+  <div class="lang-switch">
+    <button id="langBtn">
+      <span>🌐</span>
+      <span id="currentLang">中文</span>
+      <span style="font-size: 0.75rem;">▾</span>
+    </button>
+    <div class="lang-dropdown" id="langDropdown">
+      <button data-lang="zh" class="active">🇨🇳 中文</button>
+      <button data-lang="en">🇺🇸 English</button>
+      <button data-lang="jp">🇯🇵 日本語</button>
+      <button data-lang="kr">🇰🇷 한국어</button>
+      <button data-lang="es">🇪🇸 Español</button>
+      <button data-lang="fr">🇫🇷 Français</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="tag" data-i18n="tag">Welcome to my personal homepage</div>
+    <h1 data-i18n="title">Welcome to A Xisihuairen's website</h1>
+    <p class="lead" data-i18n="subtitle">
+      这里是阿西四坏人（B站主播）的个人主页，分享游戏、音乐与生活的精彩瞬间。
+    </p>
+    <div class="cta">
+      <a href="#contact" class="btn btn-primary" data-i18n="cta1">📧 联系我</a>
+      <a href="https://space.bilibili.com/" target="_blank" class="btn btn-secondary" data-i18n="cta2">🎬 B站空间</a>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="card">
+      <div class="icon">🎮</div>
+      <h3 data-i18n="f1t">游戏直播</h3>
+      <p data-i18n="f1d">精彩游戏实况，每日更新，一起畅玩每一个瞬间。</p>
+    </div>
+    <div class="card">
+      <div class="icon">🎵</div>
+      <h3 data-i18n="f2t">音乐分享</h3>
+      <p data-i18n="f2d">热爱音乐，偶尔翻唱，用旋律记录生活的温度。</p>
+    </div>
+    <div class="card">
+      <div class="icon">🎬</div>
+      <h3 data-i18n="f3t">日常 Vlog</h3>
+      <p data-i18n="f3d">记录真实的自己，分享有趣的故事与幕后花絮。</p>
+    </div>
+    <div class="card">
+      <div class="icon">💬</div>
+      <h3 data-i18n="f4t">粉丝互动</h3>
+      <p data-i18n="f4d">感谢每一位小伙伴的支持，欢迎私信与我交流。</p>
+    </div>
+  </section>
+</main>
+
+<footer id="contact">
+  <div class="email-label" data-i18n="emailLabel">📩 邮箱</div>
+  <a class="email" href="mailto:zongchen2025@163.com">zongchen2025@163.com</a>
+  <div class="copyright">© 2026 A Xisihuairen · Bilibili Streamer</div>
+</footer>
+
+<script>
+  const translations = {
+    zh: {
+      tag: "欢迎来到我的个人主页",
+      title: "Welcome to A Xisihuairen's website",
+      subtitle: "这里是阿西四坏人（B站主播）的个人主页，分享游戏、音乐与生活的精彩瞬间。",
+      cta1: "📧 联系我",
+      cta2: "🎬 B站空间",
+      f1t: "游戏直播", f1d: "精彩游戏实况，每日更新，一起畅玩每一个瞬间。",
+      f2t: "音乐分享", f2d: "热爱音乐，偶尔翻唱，用旋律记录生活的温度。",
+      f3t: "日常 Vlog", f3d: "记录真实的自己，分享有趣的故事与幕后花絮。",
+      f4t: "粉丝互动", f4d: "感谢每一位小伙伴的支持，欢迎私信与我交流。",
+      emailLabel: "📩 邮箱"
+    },
+    en: {
+      tag: "Welcome to my personal homepage",
+      title: "Welcome to A Xisihuairen's website",
+      subtitle: "This is the personal homepage of A Xisihuairen (Bilibili streamer), sharing gaming, music and life highlights.",
+      cta1: "📧 Contact Me",
+      cta2: "🎬 Bilibili Space",
+      f1t: "Game Streaming", f1d: "Exciting game plays, daily updates — let's enjoy every moment together.",
+      f2t: "Music Sharing", f2d: "I love music, occasionally do covers, capturing life's warmth through melodies.",
+      f3t: "Daily Vlog", f3d: "Documenting my authentic self, sharing fun stories and behind-the-scenes moments.",
+      f4t: "Fan Interaction", f4d: "Thanks for every friend's support. Feel free to DM me anytime.",
+      emailLabel: "📩 Email"
+    },
+    jp: {
+      tag: "ホームページへようこそ",
+      title: "Welcome to A Xisihuairen's website",
+      subtitle: "こちらは阿西四坏人（Bilibili配信者）のホームページです。ゲーム・音楽・日常をシェアします。",
+      cta1: "📧 お問い合わせ",
+      cta2: "🎬 Bilibiliスペース",
+      f1t: "ゲーム配信", f1d: "毎日更新の熱いゲーム実況、一緒に楽しみましょう。",
+      f2t: "音楽シェア", f2d: "音楽が大好きで、時々カバーもします。メロディで日常を記録。",
+      f3t: "日常Vlog", f3d: "ありのままの自分を記録。楽しいエピソードや裏話も。",
+      f4t: "ファン交流", f4d: "応援ありがとう！お気軽にDMください。",
+      emailLabel: "📩 メール"
+    },
+    kr: {
+      tag: "개인 홈페이지에 오신 것을 환영합니다",
+      title: "Welcome to A Xisihuairen's website",
+      subtitle: "아시사후아이렌(Bilibili 스트리머)의 개인 홈페이지입니다. 게임, 음악, 일상을 공유합니다.",
+      cta1: "📧 연락하기",
+      cta2: "🎬 Bilibili 스페이스",
+      f1t: "게임 방송", f1d: "매일 업데이트되는 짜릿한 게임 플레이, 함께 즐겨요!",
+      f2t: "음악 공유", f2d: "음악을 사랑하고 가끔 커버도 합니다. 멜로디로 일상을 기록.",
+      f3t: "일상 Vlog", f3d: "진솔한 일상과 재미있는 이야기, 비하인드를 공유합니다.",
+      f4t: "팬 소통", f4d: "응원해 주셔서 감사합니다! 언제든 DM 주세요.",
+      emailLabel: "📩 이메일"
+    },
+    es: {
+      tag: "Bienvenido a mi página personal",
+      title: "Welcome to A Xisihuairen's website",
+      subtitle: "Esta es la página personal de A Xisihuairen (streamer de Bilibili), compartiendo juegos, música y momentos destacados.",
+      cta1: "📧 Contáctame",
+      cta2: "🎬 Espacio Bilibili",
+      f1t: "Streaming de juegos", f1d: "Partidas emocionantes, actualizadas a diario — disfrutemos juntos.",
+      f2t: "Compartir música", f2d: "Me encanta la música, a veces hago covers, capturando la vida en melodías.",
+      f3t: "Vlog diario", f3d: "Documento mi yo auténtico, comparto historias divertidas y momentos detrás de cámaras.",
+      f4t: "Interacción con fans", f4d: "¡Gracias por su apoyo! No duden en escribirme.",
+      emailLabel: "📩 Correo"
+    },
+    fr: {
+      tag: "Bienvenue sur ma page personnelle",
+      title: "Welcome to A Xisihuairen's website",
+      subtitle: "Voici la page personnelle de A Xisihuairen (streameur Bilibili), partageant jeux, musique et moments de vie.",
+      cta1: "📧 Me contacter",
+      cta2: "🎬 Espace Bilibili",
+      f1t: "Streaming de jeux", f1d: "Des parties passionnantes, mises à jour chaque jour — profitons ensemble.",
+      f2t: "Partage musical", f2d: "J'adore la musique, je fais parfois des reprises, la vie en mélodies.",
+      f3t: "Vlog quotidien", f3d: "Je documente mon authenticité, partage histoires amusantes et coulisses.",
+      f4t: "Interaction avec les fans", f4d: "Merci pour votre soutien ! N'hésitez pas à m'écrire.",
+      emailLabel: "📩 Email"
+    }
+  };
+
+  const langBtn = document.getElementById("langBtn");
+  const langDropdown = document.getElementById("langDropdown");
+  const currentLang = document.getElementById("currentLang");
+  const langLabels = { zh: "中文", en: "English", jp: "日本語", kr: "한국어", es: "Español", fr: "Français" };
+
+  langBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    langDropdown.classList.toggle("show");
+  });
+
+  document.addEventListener("click", () => langDropdown.classList.remove("show"));
+
+  document.querySelectorAll(".lang-dropdown button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const lang = btn.dataset.lang;
+      applyLang(lang);
+      langDropdown.classList.remove("show");
+    });
+  });
+
+  function applyLang(lang) {
+    const dict = translations[lang];
+    if (!dict) return;
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : lang;
+    currentLang.textContent = langLabels[lang];
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const key = el.getAttribute("data-i18n");
+      if (dict[key] !== undefined) el.textContent = dict[key];
+    });
+    document.querySelectorAll(".lang-dropdown button").forEach(b => {
+      b.classList.toggle("active", b.dataset.lang === lang);
+    });
+    localStorage.setItem("lang", lang);
+  }
+
+  const saved = localStorage.getItem("lang") || "zh";
+  applyLang(saved);
+</script>
+
+</body>
+</html>
